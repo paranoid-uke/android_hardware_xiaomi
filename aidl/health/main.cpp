@@ -39,15 +39,24 @@ class HealthImpl : public Health {
   void UpdateHealthInfo(HealthInfo* health_info) override;
 };
 void HealthImpl::UpdateHealthInfo(HealthInfo* health_info) {
-  if (health_info->batteryChargeTimeToFullNowSeconds == 65535) {
+  if (health_info->batteryChargeTimeToFullNowSeconds == 65535 ||
+      health_info->batteryChargeTimeToFullNowSeconds < 0) {
     health_info->batteryChargeTimeToFullNowSeconds = -1;
   } else {
     health_info->batteryChargeTimeToFullNowSeconds *= kChargeTimeToFullMultiplier;
   }
-  health_info->batteryChargeCounterUah *= kChargeCounterMultiplier;
+  if (health_info->batteryChargeCounterUah > 0) {
+    health_info->batteryChargeCounterUah *= kChargeCounterMultiplier;
+  }
 }
 ndk::ScopedAStatus HealthImpl::getChargeCounterUah(int32_t* out) {
-  *out *= kChargeCounterMultiplier;
+  auto status = Health::getChargeCounterUah(out);
+  if (!status.isOk()) {
+    return status;
+  }
+  if (*out > 0) {
+    *out *= kChargeCounterMultiplier;
+  }
   return ndk::ScopedAStatus::ok();
 }
 }  // namespace aidl::android::hardware::health
